@@ -6,6 +6,7 @@ Created on Tue Sep 08 16:12:55 2015
 """
 
 from numpy import *
+from pprint import pprint
 
 # 创建实验样本，可能需要对真实样本做一些处理，如去除标点符号
 def loadDataSet():
@@ -55,7 +56,7 @@ def trainNaiveBayes(trainMatrix, classLabel):
     return p0, p1, pBase
 
 # test the algorithm
-def naiveBayesClassify(vec2Classify, p0, p1, pBase):
+def classifyNB(vec2Classify, p0, p1, pBase):
     p0res = sum(vec2Classify * p0) + log(1 - pBase)
     p1res = sum(vec2Classify * p1) + log(pBase)
     if p1res > p0res:
@@ -63,19 +64,19 @@ def naiveBayesClassify(vec2Classify, p0, p1, pBase):
     else:
         return 0
 
-def testNaiveBayes():
-    loadData, classLabel = loadDataSet()
-    vocList = createNonRepeatedList(loadData)
+def testingNB():
+    listOPosts, listClasses = loadDataSet()
+    myVocabList = createVocabList(listOPosts)
     trainMat = []
-    for doc in loadData:
-         trainMat.append(detectInput(vocList, doc))
-    p0, p1, pBase = trainNaiveBayes(array(trainMat), array(classLabel))
-    testInput = ['love', 'my', 'dalmation']
-    thisDoc = array(detectInput(vocList, testInput))
-    print testInput, 'the classified as: ', naiveBayesClassify(thisDoc, p0, p1, pBase)
-    testInput = ['stupid', 'garbage']
-    thisDoc = array(detectInput(vocList, testInput))
-    print testInput, 'the classified as: ', naiveBayesClassify(thisDoc, p0, p1, pBase)
+    for doc in listOPosts:
+         trainMat.append(setOfWords2Vec(myVocabList, doc))
+    p0V, p1V, pAb = trainNB0(array(trainMat), array(listClasses))
+    testEntry = ['love', 'my', 'dalmation']
+    thisDoc = array(setOfWords2Vec(myVocabList, testEntry))
+    print testEntry, 'the classified as: ', classifyNB(thisDoc, p0V, p1V, pAb)
+    testEntry = ['help', 'my']
+    thisDoc = array(setOfWords2Vec(myVocabList, testEntry))
+    print testEntry, 'the classified as: ', classifyNB(thisDoc, p0V, p1V, pAb)
 
 def trainNB0(trainMatrix, trainCategory):
     numTrainDocs = len(trainMatrix)
@@ -96,15 +97,70 @@ def trainNB0(trainMatrix, trainCategory):
     p1Vect = p1Num / p1Denom
     return p0Vect, p1Vect, pAbusive
 
+def textParse(bigString):    #input is big string, #output is word list
+    import re
+    listOfTokens = re.split(r'\W*', bigString)
+    return [tok.lower() for tok in listOfTokens if len(tok) > 2] 
+
+def bagOfWords2VecMN(vocabList, inputSet):
+    returnVec = [0]*len(vocabList)
+    for word in inputSet:
+        if word in vocabList:
+            returnVec[vocabList.index(word)] += 1
+    return returnVec
+
+def spamTest():
+    docList=[]; classList = []; fullText =[]
+    for i in range(1,26):
+        wordList = textParse(open('email/spam/%d.txt' % i).read())
+        docList.append(wordList)
+        fullText.extend(wordList)
+        classList.append(1)
+        wordList = textParse(open('email/ham/%d.txt' % i).read())
+        docList.append(wordList)
+        fullText.extend(wordList)
+        classList.append(0)
+    vocabList = createVocabList(docList)#create vocabulary
+    trainingSet = range(50); testSet=[]           #create test set
+    for i in range(10):
+        randIndex = int(random.uniform(0,len(trainingSet)))
+        testSet.append(trainingSet[randIndex])
+        del(trainingSet[randIndex])  
+    trainMat=[]; trainClasses = []
+    for docIndex in trainingSet:#train the classifier (get probs) trainNB0
+        trainMat.append(bagOfWords2VecMN(vocabList, docList[docIndex]))
+        trainClasses.append(classList[docIndex])
+    p0V,p1V,pSpam = trainNB0(array(trainMat),array(trainClasses))
+    errorCount = 0
+    for docIndex in testSet:        #classify the remaining items
+        wordVector = bagOfWords2VecMN(vocabList, docList[docIndex])
+        if classifyNB(array(wordVector),p0V,p1V,pSpam) != classList[docIndex]:
+            errorCount += 1
+            print "classification error",docList[docIndex]
+    print 'the error rate is: ',float(errorCount)/len(testSet)
+    #return vocabList,fullText
+
 if __name__ == '__main__':
-    listOPosts,listClasses = loadDataSet()
-    myVocabList=createVocabList(listOPosts)
-    print setOfWords2Vec(myVocabList, listOPosts[0])
-    trainMat=[]
-    for postinDoc in listOPosts:
-        trainMat.append(setOfWords2Vec(myVocabList, postinDoc))
-    print trainMat
-    p0v,p1v,pAb = trainNB0(trainMat, listClasses)
-    print pAb
-    print p0v
-    print p1v
+    #listOPosts,listClasses = loadDataSet()
+    #pprint(listOPosts)
+    #print 'listClasses:', listClasses
+    #myVocabList=createVocabList(listOPosts)
+    #print 'myVocabList: ' , myVocabList
+    #print setOfWords2Vec(myVocabList, listOPosts[0])
+    #print setOfWords2Vec(myVocabList, listOPosts[1])
+    #print setOfWords2Vec(myVocabList, listOPosts[2])
+    #print setOfWords2Vec(myVocabList, listOPosts[3])
+    #print setOfWords2Vec(myVocabList, listOPosts[4])
+    #print setOfWords2Vec(myVocabList, listOPosts[5])
+    #trainMat=[]
+    #for postinDoc in listOPosts:
+    #    trainMat.append(setOfWords2Vec(myVocabList, postinDoc))
+    #print 'trainMat:' , trainMat
+    #p0v,p1v,pAb = trainNB0(trainMat, listClasses)
+    #print 'pAb: ' , pAb
+    #print 'p0v: ' , p0v
+    #print 'p1v: ' , p1v
+    #  ========================================================
+    # testingNB()
+    #  ========================================================
+    spamTest() 
