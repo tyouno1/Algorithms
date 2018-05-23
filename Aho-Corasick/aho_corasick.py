@@ -33,18 +33,25 @@ class MachineAC:
         failure = [0] * len(self.state)
         queue   = [ 0 ]
         while len(queue) > 0:
+            print 'queue: ', queue
             s = queue.pop(0)
-            print self.state[s].next.keys
             for x in self.state[s].next.keys():
+                #import ipdb; ipdb.set_trace() # BREAKPOINT
+                print 'x: ', x
                 next = self.g(s, x)
+                print  'next :' , next
                 if next is not None:
                     queue.append(next)
                 if s != 0:
+                    #import ipdb; ipdb.set_trace() # BREAKPOINT
                     f = failure[s]
                     while self.g(f, x) is None:
                         f = failure[f]
+                    #import ipdb; ipdb.set_trace() # BREAKPOINT
                     failure[next] = self.g(f, x)
                     self.output[next].extend( self.output[failure[next]] )
+                    print 'output: ', self.output
+                    print 'failure: ', failure
         self.failure = failure
 
     def g(self, s, x):
